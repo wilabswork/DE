@@ -3,6 +3,7 @@ import numpy as np
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+#transform data csv file(s)
 def transform_data1(*args, **kargs):
     #read data1 csv file
     names_data1 = pd.read_csv(kwargs['data1_path'],
@@ -43,11 +44,12 @@ def transform_data2(*args, **kargs):
     #join 2 dataframes to combine all needed columns
     names_data2=names_cols2.join(names_data2[['price','above_100']])
     
-
+#append data2 to data1 before writing the output to csv file
 def append_data(*args, **kargs):
     #append processed data2 to processed data1 to complete the batch processing
     names_data=names_data1.append(names_data2, ignore_index=True)
 
+#write output to csv file
 def save_data(*args, **kargs):
     #save to csv file
     names_data.to_csv(kwargs['output_path'], 
@@ -55,7 +57,7 @@ def save_data(*args, **kargs):
                             encoding='utf-8',
                             index=False)
 
-#set arguments
+#arguments to pass to DAG
 default_args={
     "owner": "airflow",
     "start_date": datetime(2022,9,18),
@@ -63,12 +65,22 @@ default_args={
     "retry_delay":timedelta(minutes=10)
 }
 
+#set DAG with daily schedule
 dag = DAG(
    dag_id="01_daily",
    start_date=dt.datetime(2022, 9, 18),
    schedule_interval="@daily",
    default_args=default_args
 )
+
+#define tasks for the DAG
+transform_data1_task = PythonOperator(task_id='data1_task', python_callable=transform_data1,op_kwargs={'data1_path': '/dataset1.csv'})
+transform_data2_task = PythonOperator(task_id='data2_task', python_callable=transform_data2,op_kwargs={'data2_path': '/dataset2.csv'})
+append_data_task = PythonOperator(task_id='append_data_task', python_callable=append_data)
+save_data_task = PythonOperator(task_id='save_data_task', python_callable=save_data)
+
+#create workflow to run sequence of the tasks to process data1 & data2
+transform_data1_task >> transform_data2_task >> append_data_task >> save_data_task
 
 
 
