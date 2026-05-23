@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ComparisonList {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  items       ComparisonItem[]
+}
+
+model ComparisonItem {
+  id               String         @id @default(cuid())
+  comparisonListId String
+  comparisonList   ComparisonList @relation(fields: [comparisonListId], references: [id], onDelete: Cascade)
+  productName      String
+  searchQuery      String
+  category         String?
+  results          SearchResult[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model SearchResult {
+  id               String         @id @default(cuid())
+  comparisonItemId String
+  comparisonItem   ComparisonItem @relation(fields: [comparisonItemId], references: [id], onDelete: Cascade)
+  platform         String
+  title            String
+  price            Float
+  currency         String         @default("SGD")
+  imageUrl         String?
+  productUrl       String
+  specs            String?
+  rating           Float?
+  reviewCount      Int?
+  seller           String?
+  inStock          Boolean        @default(true)
+  scrapedAt        DateTime       @default(now())
+}
